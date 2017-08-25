@@ -13,7 +13,7 @@ if __name__ == '__main__':
     metadata = dict(
         name         = 'marketxtradermodel',
         use_scm_version=True, # Deduce version from git tag.
-        description = 'Reproduced implementation of market model described in Bakker et al, Physica A 2010.'
+        description = 'Reproduced implementation of market model described in Bakker et al, Physica A 2010.',
         long_description  = long_desc,
         license      = 'Apache 2.0',
         packages     = ['marketxtradermodel'],

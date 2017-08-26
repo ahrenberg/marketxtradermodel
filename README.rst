@@ -9,6 +9,10 @@ Note that this is not the code used to produce the results in [BHKR09], but a re
 
 .. _NetworkX: http://networkx.github.io
 
+Status
+------
+Alpha: Currently under development and testing.
+
 Example
 -------
 >>> import marketxtradermodel as mxtm

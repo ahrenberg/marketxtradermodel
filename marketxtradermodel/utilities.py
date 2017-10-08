@@ -34,8 +34,10 @@ def populate_graph(graph,**trader_init_arguments):
 
     Returns
     -------
-    dict from original nodes to newly created trader nodes
-        Provided for convenience.
+    graph : networx graph
+        Copy of the updated input parameter graph.
+    node_map : dict 
+        Lookup dictionary from original graph nodes to newly created trader nodes.
 
     See Also
     --------
@@ -50,4 +52,4 @@ def populate_graph(graph,**trader_init_arguments):
     _nx.relabel_nodes(graph, node_map, copy=False)
 
     # Return the map, might be of use to caller.
-    return node_map
+    return graph, node_map

@@ -81,8 +81,6 @@ class Trader(object):
         Items are looked up at a logical integer time moduolo the capacity (current length). 
 
         """
-        def __new__(cls,t):
-            return super().__new__(cls,t)
         def __getitem__(self, key):
             return super().__getitem__(key % len(self))
         def __setitem__(self, key, val):

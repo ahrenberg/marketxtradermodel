@@ -115,11 +115,11 @@ class PriceRanges(object):
                 # Equal distance, we are done.
                 self.price = current_price
                 price_found = True
-                n_iters += 1
+            n_iters += 1
             # The method above should always find a price, but the following if-case
             # is left in to break if running over the full range of prices. This is to
             # catch bugs while developing and avoiding an infinite loop.
             assert n_iters < len(self.sell_prices)*2, \
                   "Lots of step, breaking, something wrong. Phases? Infinite loop?"
-
+            
         return self.price

@@ -30,9 +30,35 @@ class TestPopulate:
         G = utpop_fix
         # Call function.
         G2,node_map = populate_graph(G)
-        # Assert that the keys in node map are exactly the nodes in G2.
+        # Assert that the values in node map are exactly the nodes in G2.
         assert(set(G2.nodes()) == set(node_map.values()))
         # Assert that all nodes are Traders.
+        assert((isinstance(n,mxtm.Trader) for n in G2.nodes))
+
+    def test_inplace(self, utpop_fix):
+        """ Test inplace population."""
+        G = utpop_fix
+        # Call function.
+        G2,node_map = populate_graph(G,inplace = True)
+        # Check so we have the same object back.
+        assert(G == G2)
+        # Assert that the values in node map are exactly the nodes in G2.
+        assert(set(G2.nodes()) == set(node_map.values()))
+        # Assert that all nodes are Traders.
+        assert((isinstance(n,mxtm.Trader) for n in G2.nodes))
+
+    def test_copy(self, utpop_fix):
+        """ Test copy population."""
+        G = utpop_fix
+        # Call function.
+        G2,node_map = populate_graph(G,inplace = False)
+        # Check so we do not have the same object back.
+        assert(G != G2)
+        # Assert that the keys in node map are exactly the nodes in G
+        # and that the values are exactly the nodes in G2.
+        assert(set(G.nodes()) == set(node_map.keys()))
+        assert(set(G2.nodes()) == set(node_map.values()))
+        # Assert that all nodes in G2 are Traders.
         assert((isinstance(n,mxtm.Trader) for n in G2.nodes))
 
     def test_map_const(self,utpop_fix):

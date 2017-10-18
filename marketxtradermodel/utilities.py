@@ -18,6 +18,7 @@ Utility functions for trading simulation.
 
 import networkx as _nx
 from .trader import Trader as _Trader
+import types as _types
 
 def populate_graph(graph,**trader_init_arguments):
     """ Substitude nodes in an existing graph with traders.
@@ -29,8 +30,11 @@ def populate_graph(graph,**trader_init_arguments):
     ----------
     graph : networkx graph
         A general networkx graph; modified by function.
-    \**trader_init_arguments : one or more named keywords for Trader.__init__
-        See Trader
+    **trader_init_arguments : one or more named keywords for Trader.__init__
+        If the value of a parameter is a generator then that generator will be
+        used to produce a new parameter value for each new trader created.
+        For any other types the parameter value is passed as is to the Trader.
+        See Trader for list of arguments.
 
     Returns
     -------
@@ -44,10 +48,24 @@ def populate_graph(graph,**trader_init_arguments):
     Trader : For documentation on parameters.
    
     """
-    # First build the dictionary from the old graph nodes to a set of new ones.
+
+    # Check arguments provided to separate out the ones requireing special treatment.
+    trader_const_arguments = {}
+    trader_gen_arguments = {}
+    
+    for k,v in trader_init_arguments.items():
+        if isinstance(v,_types.GeneratorType):
+            trader_gen_arguments[k] = v
+        else:
+            trader_const_arguments[k] = v
+
+    # The construction of the trader arguments is quite a dense piece of code.
+    # First the trader arguments which are 'const' i.e. the same for each trader
+    # are inserted in an empty dict. Then it is updated with the generated arguments
     node_map = dict(zip(graph.nodes.keys(),
-                        (_Trader(**trader_init_arguments) \
-                         for n in range(graph.number_of_nodes()))))
+                        (_Trader(**trader_const_arguments,
+                                 **{k:v.__next__() for k,v in trader_gen_arguments.items()})
+                         for _ in graph.nodes.keys())))
     # Then relabel the nodes.
     _nx.relabel_nodes(graph, node_map, copy=False)
 

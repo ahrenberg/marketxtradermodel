@@ -45,7 +45,7 @@ def populate_graph(graph,**trader_init_arguments):
    
     """
     # First build the dictionary from the old graph nodes to a set of new ones.
-    node_map = dict(zip(graph.nodes_iter(),
+    node_map = dict(zip(graph.nodes.keys(),
                         (_Trader(**trader_init_arguments) \
                          for n in range(graph.number_of_nodes()))))
     # Then relabel the nodes.

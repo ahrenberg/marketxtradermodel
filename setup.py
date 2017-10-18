@@ -21,7 +21,7 @@ if __name__ == '__main__':
         author_email = 'lukas@ahrenberg.se',
         url = 'https://github.com/ahrenberg/marketxtradermodel',
         setup_requires  = ['setuptools_scm'], # To deduce version from git, quite useful for now. 
-        install_requires = ['numpy','networkx'],
+        install_requires = ['numpy','networkx>=2'],
         python_requires = '>=2.7, !=3.0.*, !=3.1.*, >=3.2, <4',
         )
 

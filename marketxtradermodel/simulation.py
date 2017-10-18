@@ -54,14 +54,14 @@ def time_step(t, graph, price_range):
     # Clear the price lists
     price_range.clear_prices()
     # Go over nodes and update epsilon and prices for this time step.
-    for n in graph.nodes_iter():
+    for n in graph.nodes.keys():
         n.update_epsilon(t)
         (p_s, p_b) = n.compute_price_points(t, graph.neighbors(n))
         price_range.insert(p_s, p_b)
         # Compute the new price
     price_range.compute_price()
     # Go over nodes and update states for this time step
-    for n in graph.nodes_iter():
+    for n in graph.nodes.keys():
         n.update_state(t, price_range.price, graph.neighbors(n))
         # For convenience, return price
     return price_range.price

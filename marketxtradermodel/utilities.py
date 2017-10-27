@@ -70,9 +70,9 @@ def populate_graph(graph, inplace = True, **trader_init_arguments):
     # First the trader arguments which are 'const' i.e. the same for each trader
     # are inserted in an empty dict. Then it is updated with the generated arguments
     node_map = dict(zip(w_graph.nodes.keys(),
-                        (_Trader(**trader_const_arguments,
+                        (_Trader(name = nk, **trader_const_arguments,
                                  **{k:v.__next__() for k,v in trader_gen_arguments.items()})
-                         for _ in w_graph.nodes.keys())))
+                         for nk in w_graph.nodes.keys())))
     # Then relabel the nodes.
     _nx.relabel_nodes(w_graph, node_map, copy=False)
 

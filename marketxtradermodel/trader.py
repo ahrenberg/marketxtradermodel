@@ -55,6 +55,8 @@ class Trader(object):
         Round-robin memory of current as well as a finite number of previous
         prices. perc_price[t], where t is the current time, will yield the
         parameter $p$ in [BHKR09].
+    name : str
+        Identification string.
 
     """
     
@@ -94,7 +96,8 @@ class Trader(object):
                  D = lambda : _np.random.normal(0.0, 1.0),
                  S = lambda : _np.random.choice((-1,0,1)),
                  memory_length = 1,
-                 epsilon_dist = lambda : _np.random.normal( 0, 0.33)):
+                 epsilon_dist = lambda : _np.random.normal( 0, 0.33),
+                 name = None):
         """
         Init method.
         
@@ -129,6 +132,8 @@ class Trader(object):
             Individual trader "error", $\epsilon_i$ in [BHKR09].
             Defaults to callable function sampling from normal distribution of
             mean 0.0 and std. dev. 0.33.
+        name : str, optional
+            Identification string.
 
         Notes
         -----
@@ -162,6 +167,8 @@ class Trader(object):
         self.epsilon_dist = epsilon_dist
         # Percieved price Also in memory?
         self.perc_price = Trader.RRMem((0,)*(memory_length+1))
+        # Set name.
+        self.name = name
         
     def update_epsilon(self, t):
         """Update epsilon for time t.

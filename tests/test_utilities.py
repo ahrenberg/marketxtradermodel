@@ -105,4 +105,9 @@ class TestPopulate:
                and (n.A == A for n in G2.nodes)
                and set(theLambdas) == set([n.epsilon_dist for n in G2.nodes]))
 
-    
+    def test_trader_name(self, utpop_fix):
+        """ Test that trader gets named after original node."""
+        G = utpop_fix
+        G,node_map = populate_graph(G,inplace=True)
+        # Check that name works
+        assert(all([k == v.name for k,v in node_map.items()]))

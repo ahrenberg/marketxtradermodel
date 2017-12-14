@@ -31,6 +31,8 @@ try:
     # a proper setup.py install first, this will yield the old version.
     # Might also be an issue when installed on several places.
     # Probably OK for now though.
+    # Also, if installed in editable (developer) mode with pip it will
+    # of course show the version number when installed.
     __version__ = _pkgr.get_distribution(__name__).version
     # Throws an exception if no distribution can be found.
 except _pkgr.DistributionNotFound as e:

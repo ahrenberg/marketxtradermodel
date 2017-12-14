@@ -5,3 +5,5 @@ build
 dist
 *egg-info
 .cache
+# Ignore emacs autosave files which might have been left behind.
+\#*\#

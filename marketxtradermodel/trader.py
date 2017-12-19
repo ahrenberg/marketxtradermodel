@@ -178,7 +178,6 @@ class Trader(object):
         t : Non-negative int
             Time when epsilon should be resampled.
         """
-        
         self.eps[t] = Trader._sample(self.epsilon_dist)
         
     def compute_price_points(self, t, neighbors):
@@ -199,7 +198,12 @@ class Trader(object):
             - self.B * self.perc_price[t-1] \
             + self.C * Trader._influence(neighbors, t-1) \
             + self.D
-        return ((Trader._s-K)/(self.A + self.B), (Trader._b-K)/(self.A + self.B))
+        p_s = (Trader._s - K)/(self.A + self.B)
+        p_b = (Trader._b - K)/(self.A + self.B)
+        if p_b > p_s:
+            print("Buy price ({0}) should always be lower than sell price ({1})!".format(p_b, p_s))
+            print(" A + B --> {0} [A={1},B={2}]".format(self.A + self.B, self.A, self.B))
+        return (p_s, p_b)
     
     def update_state(self, t, price_t, neighbors):
         """
@@ -218,10 +222,15 @@ class Trader(object):
         # Perceived price at this time
         self.perc_price[t] = price_t + self.eps[t]
         # Compute L_t
-        L_t = self.A * self.perc_price[t] \
-              + self.B * (self.perc_price[t] - self.perc_price[t-1]) \
-              + self.C * Trader._influence(neighbors, t-1) \
-              + self.D
+        # L_t = self.A * self.perc_price[t] \
+        #       + self.B * (self.perc_price[t] - self.perc_price[t-1]) \
+        #       + self.C * Trader._influence(neighbors, t-1) \
+        #       + self.D
+        K = (self.A + self.B) * self.eps[t] \
+            - self.B * self.perc_price[t-1] \
+            + self.C * Trader._influence(neighbors, t-1) \
+            + self.D
+        L_t = (self.A + self.B) * price_t + K
         # Update state
         if L_t < Trader._b:
             self.state[t] = -1

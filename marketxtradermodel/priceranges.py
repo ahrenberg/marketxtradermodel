@@ -1,8 +1,7 @@
 """
-The following class is used to hold sorted lists of buy and sell prices 
-produced by the traders during a single iteration of a simulation. It also computes
-and tracks the current 'balancing' price by a method akin to that described
-last in Section 2 of [BHKR09].
+The following class is used to keep track of the intervals in which traders
+choose to buy and sell, as well as any known solutions, where the number of
+buyers matches the number of sellers.
 
 References
 ----------
@@ -27,7 +26,7 @@ References
 # limitations under the License.
 
 import bisect as _bisect
-from numpy import sort as _sort
+from math import inf as _Inf
 
 class PriceRanges(object):
     """
@@ -45,10 +44,30 @@ class PriceRanges(object):
     """
     
     def __init__(self):
-        self.sell_prices = []
-        self.buy_prices = []
-        self.price = 0
+        self.clear_prices()
 
+    def _add_interval_value_and_check_solution(self, i_lo, i_hi, p):
+        """ Add p to the interval_values where index in range i_lo <= i < i_hi.
+        If the resulting value is equal to 0 compute the midpoint from the 
+        bounds array and add this to self.known_solutions.
+
+        Parameters
+        ----------
+        idx_bound : int
+            Upper index bound.
+        p : float
+            Price value to add to interval values. Typically in set {-1,0,1}.
+        """
+        for i in range(i_lo, i_hi):
+            self.trade_interval_values[i] += p
+            # Check if solution is found, ingore solutions with infinite prices.
+            if 0 == self.trade_interval_values[i] \
+               and i > 0 and i+1 < len(self.trade_interval_values):
+                self.known_solutions.append((self.trade_interval_bounds[i-1]
+                                             + self.trade_interval_bounds[i])
+                                            / 2.0)
+        
+                
     def insert(self, p_s, p_b):
         """ Inserts sell and buy price into ranges.
         
@@ -60,66 +79,64 @@ class PriceRanges(object):
             Buy price.
 
         """
-        _bisect.insort(self.sell_prices, p_s)
-        _bisect.insort(self.buy_prices, p_b)
+        # Clear known solutions.
+        self.known_solutions = []
+        # Check inputs
+        assert (abs(p_s) != _Inf and abs(p_b) != _Inf), "Buy or sell price can not be infinite"
+        # Figure out if the buy or sell price is the lower and
+        # create ranges.
+        # Assume that buy price is less than sell price.
+        p_lo = p_b
+        p_lo_val = -1
+        p_hi = p_s
+        p_hi_val = 1
+        # However, if it is swapped, we need to rearrange.
+        if p_s < p_b:
+            p_lo = p_s
+            p_lo_val = 1
+            p_hi = p_b
+            p_hi_val = -1
+        # Find insertion points
+        # Note that as upper bound is _Inf, the next value will always exist.
+        # Also note that as the inserts are done sequentially in order, the
+        # indices remain valid.
+        i_lo  = _bisect.bisect_left(self.trade_interval_bounds,p_lo)
+        self.trade_interval_bounds.insert(i_lo, p_lo)
+        self.trade_interval_values.insert(i_lo,
+                                          self.trade_interval_values[i_lo])
+        i_hi  = _bisect.bisect_left(self.trade_interval_bounds,p_hi)
+        self.trade_interval_bounds.insert(i_hi, p_hi)
+        self.trade_interval_values.insert(i_hi,
+                                          self.trade_interval_values[i_hi])
+        # Now, go over the list, update values and check if any is a solution.
+        self._add_interval_value_and_check_solution(0, i_lo+1, p_lo_val)
+        self._add_interval_value_and_check_solution(i_lo+1, i_hi+1, 0)
+        self._add_interval_value_and_check_solution(i_hi+1,
+                                                    len(self.trade_interval_values),
+                                                    p_hi_val)
+
+        # Done
         
     def clear_prices(self):
-        """Clears sell and buy price ranges."""
-        self.sell_prices.clear()
-        self.buy_prices.clear()
+        """Clears price ranges and solutions."""
+        self.known_solutions = []
+        self.trade_interval_bounds = [_Inf] # Assumed to start at -_Inf
+        self.trade_interval_values = [0]
         
-    def compute_price(self):
-        """ Computes current market price for current buy and sell price ranges.
+    def compute_price(self, ref = 0):
+        """ Returns known solution closest given reference price, or None.
         
-        After execution the value of the attribute current_price contains the
-        computed value. This value is also returned by the function for 
-        convenience.
+        Parameters
+        ----------
+        ref: float
+            Reference price.
 
         Returns
         -------
-        float
-            Current market price.
-
-        Throws
-        ------
-        AssertionError
-            When the number of iterations required is greater than twice the number of sell-prices.
+        None if self.known_solutions is empty, the price,p, minimizing 
+        abs(ref - p) otherwise.
+        
         """
-        price_found = False
-        current_price = self.price
-        n_iters = 0
-        n_sell = len(self.sell_prices)
-        n_buy = len(self.buy_prices)
-        while not price_found:
-            sell_idx = _bisect.bisect_left(self.sell_prices, current_price)
-            buy_idx = _bisect.bisect_right(self.buy_prices, current_price)
-            sell_dist = sell_idx
-            buy_dist = len(self.buy_prices) - buy_idx
-            if sell_dist > buy_dist:
-                # More sell indices, back up towards the list beginning
-                # Take up to two closest elements from both sell and buy lists,
-                # form a new listand sort it.
-                l = _sort(self.sell_prices[max(sell_idx - 2,0):max(sell_idx,1)] \
-                         + self.buy_prices[max(buy_idx - 2,0):max(buy_idx,1)])
-                # The two largest (last) elements will be the closest ones. Let the new price be their average.
-                current_price = (l[-2] + l[-1])/2.0
-            elif buy_dist > sell_dist:
-                # More sell indices, back up towards the list beginning
-                # Take up to two closest elements from both sell and buy lists,
-                # form a new listand sort it.
-                l = _sort(self.sell_prices[min(sell_idx+1,n_sell-1):min(sell_idx + 3,n_sell)] \
-                         + self.buy_prices[min(buy_idx+1,n_buy-1):min(buy_idx + 3,n_buy)])
-                # The two smallest (first) elements will be the closest ones. Let the new price be their average.
-                current_price = (l[0] + l[1])/2.0
-            else:
-                # Equal distance, we are done.
-                self.price = current_price
-                price_found = True
-            n_iters += 1
-            # The method above should always find a price, but the following if-case
-            # is left in to break if running over the full range of prices. This is to
-            # catch bugs while developing and avoiding an infinite loop.
-            assert n_iters < len(self.sell_prices)*2, \
-                  "Lots of step, breaking, something wrong. Phases? Infinite loop?"
-            
-        return self.price
+        return None if len(self.known_solutions) <= 0 \
+            else min(self.known_solutions, key = lambda p : abs(ref - p))
+        

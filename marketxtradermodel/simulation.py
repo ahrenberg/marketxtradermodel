@@ -59,12 +59,12 @@ def time_step(t, graph, price_range):
         (p_s, p_b) = n.compute_price_points(t, graph.neighbors(n))
         price_range.insert(p_s, p_b)
         # Compute the new price
-    price_range.compute_price()
+    p = price_range.compute_price()
     # Go over nodes and update states for this time step
     for n in graph.nodes.keys():
-        n.update_state(t, price_range.price, graph.neighbors(n))
+        n.update_state(t, p, graph.neighbors(n))
         # For convenience, return price
-    return price_range.price
+    return p
 
 
 def evolve(graph, time_range, price_range):

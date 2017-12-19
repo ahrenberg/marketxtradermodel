@@ -34,13 +34,8 @@ class PriceRanges(object):
     
     Attributes
     ----------
-    sell_prices: list of float
-        List of current selling prices.
-    buy_prices: list of float
-        List of current buying prices.
-    price : float
-        Current market price.
-
+    known_solutions: list of float
+        List of currently known balancing prices.
     """
     
     def __init__(self):

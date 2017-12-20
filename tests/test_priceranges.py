@@ -25,7 +25,8 @@ import math
 def test_creation():
     pr = PriceRanges()
     assert(None == pr.compute_price())
-
+    assert(None == pr.price)
+    
 def test_insert_one():
     pr = PriceRanges()
     # Sell at 1, buy at -1
@@ -44,11 +45,14 @@ def test_insert_one():
     assert( 0 == pr.trade_interval_values[1])
     assert( 1 == pr.trade_interval_values[2])
     # Finally, we should get the 0 solution no matter
-    # where we ask.
-    assert(0 == pr.compute_price())
-    assert(0 == pr.compute_price(ref = 0.1))
-    assert(0 == pr.compute_price(ref = -2))
-    assert(0 == pr.compute_price(ref = 100))
+    # where we ask (which we do by forcefully setting pr.price).
+    assert(0 == pr.compute_price() and 0 == pr.price)
+    pr.price = 0.1
+    assert(0 == pr.compute_price() and 0 == pr.price)
+    pr.price = -2
+    assert(0 == pr.compute_price() and 0 == pr.price)
+    pr.price = 100
+    assert(0 == pr.compute_price() and 0 == pr.price)
 
 def test_insert_one_flipped():
     pr = PriceRanges()
@@ -68,17 +72,21 @@ def test_insert_one_flipped():
     assert( 0 == pr.trade_interval_values[1])
     assert(-1 == pr.trade_interval_values[2])
     # Finally, we should get the 0 solution no matter
-    # where we ask.
-    assert(0 == pr.compute_price())
-    assert(0 == pr.compute_price(ref = 0.1))
-    assert(0 == pr.compute_price(ref = -5))
-    assert(0 == pr.compute_price(ref = 100))
+    # where we ask (which we do by forcefully setting pr.price).
+    assert(0 == pr.compute_price() and 0 == pr.price)
+    pr.price = 0.1
+    assert(0 == pr.compute_price() and 0 == pr.price)
+    pr.price = -5
+    assert(0 == pr.compute_price() and 0 == pr.price)
+    pr.price = 100
+    assert(0 == pr.compute_price() and 0 == pr.price)
 
 def test_clear_prices():
     pr = PriceRanges()
     pr.insert(-1,1)
     pr.clear_prices()
     assert(None == pr.compute_price())
+    assert(None == pr.price)
     pr.insert(-1,1)
     assert(0 == pr.compute_price())
 
@@ -104,9 +112,15 @@ def test_insert_multiple():
     # Two solutions found.
     assert(2 == len(pr.known_solutions))
     # They are correct.
-    assert((b_b + a_s)/2.0 in pr.known_solutions)
-    assert((b_s + c_b)/2.0 in pr.known_solutions)
+    s1 = (b_b + a_s)/2.0
+    s2 = (b_s + c_b)/2.0
+    assert(s1 in pr.known_solutions)
+    assert(s2 in pr.known_solutions)
     # Querying on their far side gives the correspoding solution.
-    assert((b_b + a_s)/2.0 == pr.compute_price(ref = (b_b + 0.25*(a_s - b_b)/2.0)))
-    assert((b_s + c_b)/2.0 == pr.compute_price(ref = (b_s + 0.75*(c_b - b_s)/2.0)))
+    # The default solution should be the one closest to zero.
+    assert(min(abs(s1),abs(s2)) == pr.compute_price())
+    pr.price = (b_b + 0.25*(a_s - b_b)/2.0)
+    assert(s1 == pr.compute_price())
+    pr.price = (b_s + 0.75*(c_b - b_s)/2.0)
+    assert(s2 == pr.compute_price())
 

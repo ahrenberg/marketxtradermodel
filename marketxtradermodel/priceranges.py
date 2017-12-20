@@ -36,10 +36,13 @@ class PriceRanges(object):
     ----------
     known_solutions: list of float
         List of currently known balancing prices.
+    price: float
+        Price solution from most recent call to compute_price or None.
     """
     
     def __init__(self):
         self.clear_prices()
+        self.price = None
 
     def _add_interval_value_and_check_solution(self, i_lo, i_hi, p):
         """ Add p to the interval_values where index in range i_lo <= i < i_hi.
@@ -118,20 +121,25 @@ class PriceRanges(object):
         self.trade_interval_bounds = [_Inf] # Assumed to start at -_Inf
         self.trade_interval_values = [0]
         
-    def compute_price(self, ref = 0):
-        """ Returns known solution closest given reference price, or None.
+    def compute_price(self):
+        """ Updates `price` with value from `known_solutions`, or None.
+    
+        If known_solutions contains multiple values the one closest
+        to current value of `price` is chosen, minimizing 
+        abs(self.price - p) for p in self.known_solutions.
         
-        Parameters
-        ----------
-        ref: float
-            Reference price.
-
+        If self.price is None, the price closest to 0 is picked.
+        
         Returns
         -------
-        None if self.known_solutions is empty, the price,p, minimizing 
-        abs(ref - p) otherwise.
-        
+        float
+            The new value of self.price
         """
-        return None if len(self.known_solutions) <= 0 \
-            else min(self.known_solutions, key = lambda p : abs(ref - p))
+
+        ref = 0 if None == self.price else self.price
+
+        self.price = None if len(self.known_solutions) <= 0 \
+                     else min(self.known_solutions,
+                              key = lambda p : abs(ref - p))
+        return self.price
         

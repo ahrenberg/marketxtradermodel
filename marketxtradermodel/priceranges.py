@@ -30,7 +30,8 @@ from math import inf as _Inf
 
 class PriceRanges(object):
     """
-    Class to keep track of sell and buy prices, as well as the current mid price.
+    Class to compute possible equilibrium prices from registered trader's buy
+    and sell prices.
     
     Attributes
     ----------

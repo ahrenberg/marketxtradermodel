@@ -32,39 +32,20 @@ class PriceRanges(object):
     """
     Class to compute possible equilibrium prices from registered trader's buy
     and sell prices.
-    
-    Attributes
-    ----------
-    known_solutions: list of float
-        List of currently known balancing prices.
-    price: float
-        Price solution from most recent call to compute_price or None.
     """
     
     def __init__(self):
-        self.clear_prices()
-        self.price = None
-
-    def _add_interval_value_and_check_solution(self, i_lo, i_hi, p):
-        """ Add p to the interval_values where index in range i_lo <= i < i_hi.
-        If the resulting value is equal to 0 compute the midpoint from the 
-        bounds array and add this to self.known_solutions.
-
-        Parameters
-        ----------
-        idx_bound : int
-            Upper index bound.
-        p : float
-            Price value to add to interval values. Typically in set {-1,0,1}.
-        """
-        for i in range(i_lo, i_hi):
-            self.trade_interval_values[i] += p
-            # Check if solution is found, ingore solutions with infinite prices.
-            if 0 == self.trade_interval_values[i] \
-               and i > 0 and i+1 < len(self.trade_interval_values):
-                self.known_solutions.append((self.trade_interval_bounds[i-1]
-                                             + self.trade_interval_bounds[i])
-                                            / 2.0)
+        # Contains registered buy and sell prices.
+        self._prices = []
+        # This attribute contains the result from the most recent call to
+        # compute_price, or 0 if no call has been made.
+        self._price_ref = 0
+        # This is the difference (# buyers) - (# sellers) given the price in
+        # _price_ref.
+        self._balance = 0
+        # Contains the change in _balance when passing each price point in
+        # _price, given traversal from lower index to higher.
+        self._balance_differences = []
         
                 
     def insert(self, p_s, p_b):
@@ -78,69 +59,104 @@ class PriceRanges(object):
             Buy price.
 
         """
-        # Clear known solutions.
-        self.known_solutions = []
-        # Check inputs
-        assert (abs(p_s) != _Inf and abs(p_b) != _Inf), "Buy or sell price can not be infinite"
-        # Figure out if the buy or sell price is the lower and
-        # create ranges.
-        # Assume that buy price is less than sell price.
-        p_lo = p_b
-        p_lo_val = -1
-        p_hi = p_s
-        p_hi_val = 1
-        # However, if it is swapped, we need to rearrange.
-        if p_s < p_b:
-            p_lo = p_s
-            p_lo_val = 1
-            p_hi = p_b
-            p_hi_val = -1
-        # Find insertion points
-        # Note that as upper bound is _Inf, the next value will always exist.
-        # Also note that as the inserts are done sequentially in order, the
-        # indices remain valid.
-        i_lo  = _bisect.bisect_left(self.trade_interval_bounds,p_lo)
-        self.trade_interval_bounds.insert(i_lo, p_lo)
-        self.trade_interval_values.insert(i_lo,
-                                          self.trade_interval_values[i_lo])
-        i_hi  = _bisect.bisect_left(self.trade_interval_bounds,p_hi)
-        self.trade_interval_bounds.insert(i_hi, p_hi)
-        self.trade_interval_values.insert(i_hi,
-                                          self.trade_interval_values[i_hi])
-        # Now, go over the list, update values and check if any is a solution.
-        self._add_interval_value_and_check_solution(0, i_lo+1, p_lo_val)
-        self._add_interval_value_and_check_solution(i_lo+1, i_hi+1, 0)
-        self._add_interval_value_and_check_solution(i_hi+1,
-                                                    len(self.trade_interval_values),
-                                                    p_hi_val)
+        # -1 weight (for balance of buyers - sellers) if rational
+        # +1 weight of irrational
+        w = -1 if p_b < p_s else 1
+        # Insert values.
+        i_s = _bisect.bisect_left(self._prices,p_s)
+        self._prices.insert(i_s,p_s)
+        self._balance_differences.insert(i_s,w)
+        i_b = _bisect.bisect_left(self._prices,p_b)
+        self._prices.insert(i_b,p_b)
+        self._balance_differences.insert(i_b,w)
+        # Now check how we are doing compared to the reference price.
+        if self._price_ref > p_b and self._price_ref > p_s:
+            # If above, subtract one if rational, add one if irrational.
+            self._balance += w
+        elif self._price_ref < p_b and self._price_ref < p_s:
+            # If below, add one if rational, subtract one if irational.
+            self._balance -= w
 
-        # Done
         
     def clear_prices(self):
-        """Clears price ranges and solutions."""
-        self.known_solutions = []
-        self.trade_interval_bounds = [_Inf] # Assumed to start at -_Inf
-        self.trade_interval_values = [0]
+        """Clears buy and sell prices."""
+        self._prices = []
+        self._balance_differences = []
+        self._balance = 0
+
+    def _search_price(self,start_idx,d):
+        """
+        Searches for a price balancing the price array.
         
-    def compute_price(self):
-        """ Updates `price` with value from `known_solutions`, or None.
+        Parameters
+        ----------
+        start_idx : int
+            Index where to start the search. Should be the result of 
+            a bisect_left.
+        d : int in -1,1
+            Direction of search. -1 means towards lower indicies, +1 towards 
+            higher.
+
+        Raises
+        ------
+        ValueError
+            If parameter d not in {-1,1}.
+        """
+        if d not in set([-1,1]):
+            raise ValueError("Search direction must be -1 or 1.")
+        idx = start_idx
+        b = self._balance
+        p = _Inf
+        # If going in the positive direction, back up
+        # one step due to the while loop checking
+        # before add.
+        if d  == 1:
+            idx -= 1;
+        while b != 0 and idx+d >= 0 \
+              and idx+d < len(self._balance_differences):
+            idx+=d
+            b += d*self._balance_differences[idx]
+        if b == 0 and idx+d >= 0 and idx+d < len(self._prices):
+            p = (self._prices[idx] + self._prices[idx + d])/2.0
+        return p
     
-        If known_solutions contains multiple values the one closest
-        to current value of `price` is chosen, minimizing 
-        abs(self.price - p) for p in self.known_solutions.
+    def compute_price(self):
+        """ Compute a price point balancing the currently registered prices.
         
-        If self.price is None, the price closest to 0 is picked.
-        
+        If multiple solutions are avaliable the one closest to the previous
+        call to compute_prices are choosen, or to 0 if this is the first call.        
+
         Returns
         -------
         float
-            The new value of self.price
+            A price which guarantees an equal number of buyers and sellers
+            given the registered prices.
+
+        Throws
+        ------
+        Exception
+            If no prices has been registerd, or if no solution is found.
         """
-
-        ref = 0 if None == self.price else self.price
-
-        self.price = None if len(self.known_solutions) <= 0 \
-                     else min(self.known_solutions,
-                              key = lambda p : abs(ref - p))
-        return self.price
-        
+        # Check if it is ok to call.
+        if len(self._prices) <= 0:
+            raise Exception("No buy and sell prices registered.")
+        # This is the current index
+        idx = _bisect.bisect_left(self._prices,self._price_ref)
+        p = _Inf
+    
+        # Check if we are lucky and already at a solution.
+        # Then pick it.
+        if self._balance == 0:
+            p = (self._prices[idx-1] + self._prices[idx])/2.0
+        else:
+            # Otherwise search
+            # Towards lower
+            p_lo = self._search_price(idx,-1)
+            # And towards higher.
+            p_hi = self._search_price(idx, 1)
+            # Pick the one closest to the current price.
+            p = min(p_lo,p_hi, key = lambda p : abs(p - self._price_ref))
+            if p == _Inf:
+                raise Exception("No solution found. All registered prices distinct?")
+        self._price_ref = p
+        return p

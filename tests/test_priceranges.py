@@ -24,69 +24,39 @@ import math
 
 def test_creation():
     pr = PriceRanges()
-    assert(None == pr.compute_price())
-    assert(None == pr.price)
+    # Calling without any prices shoudl raise an exception.
+    with pytest.raises(Exception):
+        pr.compute_price()
     
 def test_insert_one():
     pr = PriceRanges()
     # Sell at 1, buy at -1
     pr.insert(p_s = 1, p_b = -1)
-    # Should now have three price ranges.
-    assert(3 == len(pr.trade_interval_bounds))
-    # With these values
-    assert(-1 == pr.trade_interval_bounds[0])
-    assert( 1 == pr.trade_interval_bounds[1])
-    assert( math.inf == pr.trade_interval_bounds[2])
-    # And three value ranges.
-    assert(3 == len(pr.trade_interval_values))
-    print(pr.trade_interval_values)
-    # With these values.
-    assert(-1 == pr.trade_interval_values[0])
-    assert( 0 == pr.trade_interval_values[1])
-    assert( 1 == pr.trade_interval_values[2])
-    # Finally, we should get the 0 solution no matter
-    # where we ask (which we do by forcefully setting pr.price).
-    assert(0 == pr.compute_price() and 0 == pr.price)
-    pr.price = 0.1
-    assert(0 == pr.compute_price() and 0 == pr.price)
-    pr.price = -2
-    assert(0 == pr.compute_price() and 0 == pr.price)
-    pr.price = 100
-    assert(0 == pr.compute_price() and 0 == pr.price)
+    # Finally, we should get the solution at zero.
+    assert(0 == pr.compute_price())
 
+def test_insert_one_translated():
+    pr = PriceRanges()
+    # Sell at 4, buy at 2
+    pr.insert(p_s = 4, p_b = 2)
+    # Finally, we should get the solution at 3.
+    assert(3 == pr.compute_price())
+    
 def test_insert_one_flipped():
     pr = PriceRanges()
-    # Sell at -2, buy at 2
-    pr.insert(p_s = -2, p_b = 2)
-    # Should now have three price ranges.
-    assert(3 == len(pr.trade_interval_bounds))
-    # With these values
-    assert(-2 == pr.trade_interval_bounds[0])
-    assert( 2 == pr.trade_interval_bounds[1])
-    assert( math.inf == pr.trade_interval_bounds[2])
-    # And three value ranges.
-    assert(3 == len(pr.trade_interval_values))
-    print(pr.trade_interval_values)
-    # With these values.
-    assert( 1 == pr.trade_interval_values[0])
-    assert( 0 == pr.trade_interval_values[1])
-    assert(-1 == pr.trade_interval_values[2])
-    # Finally, we should get the 0 solution no matter
-    # where we ask (which we do by forcefully setting pr.price).
-    assert(0 == pr.compute_price() and 0 == pr.price)
-    pr.price = 0.1
-    assert(0 == pr.compute_price() and 0 == pr.price)
-    pr.price = -5
-    assert(0 == pr.compute_price() and 0 == pr.price)
-    pr.price = 100
-    assert(0 == pr.compute_price() and 0 == pr.price)
+    # Sell at -4, buy at -2
+    pr.insert(p_s = -4, p_b = -2)
+    # Should find a solution at -3
+    assert(-3 == pr.compute_price())
+
 
 def test_clear_prices():
     pr = PriceRanges()
     pr.insert(-1,1)
     pr.clear_prices()
-    assert(None == pr.compute_price())
-    assert(None == pr.price)
+    with pytest.raises(Exception):
+        pr.compute_price()
+    # Insert new prices and try.
     pr.insert(-1,1)
     assert(0 == pr.compute_price())
 
@@ -109,18 +79,9 @@ def test_insert_multiple():
     pr.insert(b_s,b_b)
     pr.insert(c_s,c_b)
     # Now test.
-    # Two solutions found.
-    assert(2 == len(pr.known_solutions))
-    # They are correct.
+    # The two solutions.
     s1 = (b_b + a_s)/2.0
     s2 = (b_s + c_b)/2.0
-    assert(s1 in pr.known_solutions)
-    assert(s2 in pr.known_solutions)
-    # Querying on their far side gives the correspoding solution.
     # The default solution should be the one closest to zero.
     assert(min(abs(s1),abs(s2)) == pr.compute_price())
-    pr.price = (b_b + 0.25*(a_s - b_b)/2.0)
-    assert(s1 == pr.compute_price())
-    pr.price = (b_s + 0.75*(c_b - b_s)/2.0)
-    assert(s2 == pr.compute_price())
 
